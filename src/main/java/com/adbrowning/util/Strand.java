@@ -1,5 +1,6 @@
 package com.adbrowning.util;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 /**
@@ -123,6 +124,112 @@ public class Strand implements CharSequence {
      */
     public boolean startsWith(byte[] prefix) {
         return startsWithStartingFrom(prefix, getStartingIndex());
+    }
+
+    /**
+     * Implements endWith as defined in String, but accepting a raw array of UTF8 bytes
+     * @param suffix
+     * @return
+     */
+    public boolean endsWith(byte[] suffix) {
+        if(suffix.length > getStrandLength()) return false;
+        boolean retVal = true;
+        int strandEnd = getStrandEnd();
+        for(int i = 1; retVal && i <= suffix.length; ++i) {
+            retVal = suffix[suffix.length-i] == contents[strandEnd-i];
+        }
+        return retVal;
+    }
+    /**
+     * Returns a string representation of the object. In general, the
+     * {@code toString} method returns a string that
+     * "textually represents" this object. The result should
+     * be a concise but informative representation that is easy for a
+     * person to read.
+     * It is recommended that all subclasses override this method.
+     * <p/>
+     * The {@code toString} method for class {@code Object}
+     * returns a string consisting of the name of the class of which the
+     * object is an instance, the at-sign character `{@code @}', and
+     * the unsigned hexadecimal representation of the hash code of the
+     * object. In other words, this method returns a string equal to the
+     * value of:
+     * <blockquote>
+     * <pre>
+     * getClass().getName() + '@' + Integer.toHexString(hashCode())
+     * </pre></blockquote>
+     *
+     * @return a string representation of the object.
+     */
+    @Override
+    public String toString() {
+        String retVal = null;
+        try {
+            retVal = new String(contents, getStartingIndex(), getStrandEnd(), "utf8");;
+        } catch (UnsupportedEncodingException e) {
+            // this should never happen, but...
+            char[] sink = new char[getStrandLength()];
+            int charNum = 0;
+            for(int i = getStartingIndex(); i < getStrandEnd();) {
+                int numBytes = utf8CharSize(contents[i]);
+                sink[charNum++] = decodeUTF8Char(contents, i);
+                i += numBytes;
+            }
+            return new String(sink, 0, charNum);
+        }
+
+        return retVal;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if ((o instanceof Strand)) {
+
+            Strand strand = (Strand) o;
+            int myLength = getStrandLength();
+            int otherLength = strand.getStrandLength();
+            if(myLength != otherLength) {
+                System.out.println("Both are strands, but lengths differ: " + myLength + " != " + otherLength);
+                return false;
+            }
+            int myStart = getStartingIndex();
+            int otherStart = ((Strand) o).getStartingIndex();
+            for(int i = 0; i < myLength; ++i) {
+                if(contents[i+myStart] != ((Strand) o).contents[i+otherStart]) {
+                    System.out.println("Bytes differed: " + contents[i+myStart] + " != " + strand.contents[i+otherStart]);
+                    return false;
+                }
+            }
+        } else if((o instanceof CharSequence)) {
+            int myLenth = length();
+            CharSequence other = (CharSequence) o;
+            if(myLenth != other.length()) {
+                System.out.println("Other's a CharSequence and our lengths differ: " + myLenth + " != " + other.length());
+                return false;
+            }
+            for(int myIndex = getStartingIndex(), otherIndex = 0; myIndex < getStrandEnd(); ++otherIndex) {
+                int numBytes = utf8CharSize(contents[myIndex]);
+                if(other.charAt(otherIndex) != decodeUTF8Char(contents, myIndex)) {
+                    System.out.println(other.charAt(otherIndex) + " != " + decodeUTF8Char(contents, myIndex));
+                    return false;
+                }
+                myIndex += numBytes;
+            }
+        }  else {
+            System.out.println("Nope, not a CharSequence");
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int retVal = 0;
+        for(int i = getStartingIndex(); i < getStrandEnd(); ++i) {
+            retVal = 31 * retVal + (0xFF & contents[i]);
+        }
+        return retVal;
     }
 
     /**

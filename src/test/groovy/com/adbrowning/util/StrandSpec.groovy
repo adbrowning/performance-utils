@@ -19,6 +19,24 @@ class StrandSpec extends Specification {
         'D'         |   3
     }
 
+    def "Equals should produce same results for equal but non-identical Strands"() {
+        expect:
+        new Strand("ab\u0080cd".getBytes("utf8")) == new Strand("ab\u0080cd".getBytes("utf8"))
+        new Strand("ab\u0080cd".getBytes("utf8")) == (new Strand("aab\u0080cdd".getBytes("utf8"))).subSequence(1, 6)
+        new Strand("ab\u0080cd".getBytes("utf8")) != new Strand("aab\u0080cd".getBytes("utf8"))
+        new Strand("ab\u05D0cd".getBytes("utf8")).equals(new String("ab\u05D0cd"))
+    }
+
+
+    def "Test endsWith"() {
+        Strand theStrand = new Strand("\u0080ABCD\u0080E".getBytes("utf8"))
+        expect:
+        theStrand.endsWith("E".getBytes("utf8"))
+        theStrand.endsWith("\u0080E".getBytes("utf8"))
+        !theStrand.endsWith("E\u0080".getBytes("utf8"))
+        theStrand.subSequence(1, 6).endsWith("\u0080".getBytes("utf8"))
+    }
+
     def "Subsequence cutting off a 7-bit ASCII char"() {
         Strand theStrand = new Strand("\u0080ABCD\u0080E".getBytes("utf8"));
         CharSequence subsequence = theStrand.subSequence(1, 6);
