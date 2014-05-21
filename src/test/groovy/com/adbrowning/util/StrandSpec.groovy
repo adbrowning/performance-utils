@@ -37,6 +37,39 @@ class StrandSpec extends Specification {
         theStrand.subSequence(1, 6).endsWith("\u0080".getBytes("utf8"))
     }
 
+    def "Simple index of"() {
+        Strand theStrand = new Strand("abc".getBytes("utf8"))
+        expect:
+        index == theStrand.indexOf(str)
+        where:
+        index   |   str
+        0   |   "a"
+        0   |   "ab"
+        0   |   "abc"
+        -1  |   "aa"
+        1   |   "b"
+        1   |   "bc"
+        2   |   "c"
+        -1  |   "d"
+        -1  |   "abcd"
+    }
+
+    def "indexOf with multi-byte chars"() {
+        Strand theStrand = new Strand("ab\u05d0cd".getBytes("utf8"))
+        expect:
+        index == theStrand.indexOf(str)
+        where:
+        index   |   str
+        0   |   "a"
+        0   |   "ab"
+        0   |   "ab\u05D0"
+        0   |   "ab\u05D0c"
+        2   |   "\u05D0"
+        2   |   "\u05D0c"
+        3   |   "c"
+        -1  |   "ab\u05D0d"
+    }
+
     def "Subsequence cutting off a 7-bit ASCII char"() {
         Strand theStrand = new Strand("\u0080ABCD\u0080E".getBytes("utf8"));
         CharSequence subsequence = theStrand.subSequence(1, 6);

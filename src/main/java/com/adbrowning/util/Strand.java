@@ -190,14 +190,12 @@ public class Strand implements CharSequence {
             int myLength = getStrandLength();
             int otherLength = strand.getStrandLength();
             if(myLength != otherLength) {
-                System.out.println("Both are strands, but lengths differ: " + myLength + " != " + otherLength);
                 return false;
             }
             int myStart = getStartingIndex();
             int otherStart = ((Strand) o).getStartingIndex();
             for(int i = 0; i < myLength; ++i) {
                 if(contents[i+myStart] != ((Strand) o).contents[i+otherStart]) {
-                    System.out.println("Bytes differed: " + contents[i+myStart] + " != " + strand.contents[i+otherStart]);
                     return false;
                 }
             }
@@ -205,24 +203,68 @@ public class Strand implements CharSequence {
             int myLenth = length();
             CharSequence other = (CharSequence) o;
             if(myLenth != other.length()) {
-                System.out.println("Other's a CharSequence and our lengths differ: " + myLenth + " != " + other.length());
                 return false;
             }
             for(int myIndex = getStartingIndex(), otherIndex = 0; myIndex < getStrandEnd(); ++otherIndex) {
                 int numBytes = utf8CharSize(contents[myIndex]);
                 if(other.charAt(otherIndex) != decodeUTF8Char(contents, myIndex)) {
-                    System.out.println(other.charAt(otherIndex) + " != " + decodeUTF8Char(contents, myIndex));
                     return false;
                 }
                 myIndex += numBytes;
             }
         }  else {
-            System.out.println("Nope, not a CharSequence");
             return false;
         }
         return true;
     }
 
+    public int indexOf(String str) {
+        int retVal;
+        try {
+            retVal = indexOf(str.getBytes("utf8"));
+        }  catch(UnsupportedEncodingException ex) {
+            throw new IllegalStateException("UTF-8 encoding not supported");
+        }
+        return retVal;
+    }
+
+    public int indexOf(byte[] bytes) {
+        int retVal = -1;
+
+        int lastPossibleStart = getStrandEnd() - bytes.length;
+        for(int i = getStartingIndex(); retVal == -1 && i <= lastPossibleStart; ++i) {
+
+            if(contents[i] == bytes[0]) {
+                boolean restMatched = true;
+                // check the rest of the contents
+                for(int j = 1; restMatched && j < bytes.length; ++j) {
+                    if(contents[i+j] != bytes[j]) {
+                        if(contents[i+j] == bytes[0]) {
+                            i += (j-1);
+                        } else {
+                            i += j;
+                        }
+                        restMatched = false;
+                    }
+                }
+                if(restMatched) {
+                    if(hasMultiByteChars) {
+                        retVal = 0;
+                        // this looks weird, but it's because retVal increases by 1 for each char, but the index may increase by up to 6
+                        for(int j = getStartingIndex(); j < i; ++retVal) {
+                            j += utf8CharSize(contents[j]);
+                        }
+                    } else {
+                        retVal = i;
+                    }
+                }
+            } else {
+                continue;
+            }
+        }
+        return retVal;
+
+    }
     @Override
     public int hashCode() {
         int retVal = 0;
