@@ -308,7 +308,7 @@ public class Strand implements CharSequence {
         return 0;
     }
 
-    protected char decodeUTF8Char(byte[] utf8Bytes, int startingIndex) {
+    protected static char decodeUTF8Char(byte[] utf8Bytes, int startingIndex) {
         char retVal = 0;
         int numBytes = utf8CharSize(utf8Bytes[startingIndex]);
         if(numBytes == -1) {
@@ -351,7 +351,7 @@ public class Strand implements CharSequence {
     /*
      * Decodes the number of bytes consumed by a UTF-8 char based on its leading byte
      */
-    protected int utf8CharSize(int b) {
+    protected static int utf8CharSize(int b) {
         if((b & 0x80) == 0) {
             return 1;
         }
