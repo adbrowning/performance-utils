@@ -70,6 +70,46 @@ class StrandSpec extends Specification {
         -1  |   "ab\u05D0d"
     }
 
+    def "Test split with fewer than batch size splits"() {
+        given:
+        Strand theStrand = new Strand("a|b|c".getBytes("utf8"))
+        Strand[] results = theStrand.split("|".getBytes("utf8"))
+        Strand[] expected = [new Strand("a".getBytes("utf8")), new Strand("b".getBytes("utf8")), new Strand("c".getBytes("utf8"))]
+        expect:
+        results.length == expected.length
+        for(int i = 0; i < expected.length; ++i) {
+            results[i] == expected[i]
+        }
+    }
+
+    def "Test split with exactly batch size splits"() {
+        given:
+        Strand theStrand = new Strand("a|b|c|d|e|f|g|h|i|j".getBytes("utf8"))
+        Strand[] results = theStrand.split("|".getBytes("utf8"))
+        Strand[] expected = [new Strand("a".getBytes("utf8")), new Strand("b".getBytes("utf8")), new Strand("c".getBytes("utf8")),
+                             new Strand("d".getBytes("utf8")), new Strand("e".getBytes("utf8")), new Strand("f".getBytes("utf8")),
+                             new Strand("g".getBytes("utf8")), new Strand("h".getBytes("utf8")), new Strand("i".getBytes("utf8")),
+                             new Strand("j".getBytes("utf8"))]
+        expect:
+        results.length == expected.length
+        for(int i = 0; i < expected.length; ++i) {
+            assert results[i] == expected[i]
+        }
+    }
+
+    def "Test split with more than batch size splits"() {
+        Strand theStrand = new Strand("a|b|c|d|e|f|g|h|i|j|k|".getBytes("utf8"))
+        Strand[] results = theStrand.split("|".getBytes("utf8"))
+        Strand[] expected = [new Strand("a".getBytes("utf8")), new Strand("b".getBytes("utf8")), new Strand("c".getBytes("utf8")),
+                             new Strand("d".getBytes("utf8")), new Strand("e".getBytes("utf8")), new Strand("f".getBytes("utf8")),
+                             new Strand("g".getBytes("utf8")), new Strand("h".getBytes("utf8")), new Strand("i".getBytes("utf8")),
+                             new Strand("j".getBytes("utf8")), new Strand("k".getBytes("utf8"))]
+        expect:
+        results.length == expected.length
+        for(int i = 0; i < expected.length; ++i) {
+            assert results[i] == expected[i]
+        }
+    }
     def "split with max num results"() {
         given:
         Strand theStrand = new Strand("ab\r\n\u05D0\r\ncd\r\n".getBytes("utf8"))

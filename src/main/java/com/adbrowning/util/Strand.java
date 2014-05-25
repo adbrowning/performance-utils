@@ -277,21 +277,29 @@ public class Strand implements CharSequence {
     }
 
 
-//    public Strand[] split(byte[] sequence) {
-//        Strand[] allSplits = new Strand[10];
-//        int totalNumStrands = 0;
-//        Strand[] sink = new Strand[10];
-//        Strand toSplit = this;
-//        for(int numSplits = toSplit.split(sequence, sink); numSplits == sink.length; numSplits = toSplit.split(sequence, sink)) {
-//            if(totalNumStrands + numSplits - 1 >= allSplits.length) {
-//                allSplits = Arrays.copyOf(allSplits, allSplits.length * 2);
-//            }
-//            System.arraycopy(sink, 0, allSplits, totalNumStrands, numSplits - 1);
-//            toSplit = sink[numSplits-1];
-//            totalNumStrands += numSplits - 1;
-//        }
-//        return Arrays.copyOfRange(allSplits, 0, totalNumStrands);
-//    }
+    public Strand[] split(byte[] sequence) {
+        Strand[] allSplits = new Strand[10];
+        int totalNumStrands = 0;
+        Strand[] sink = new Strand[10];
+        Strand toSplit = this;
+        int numSplits;
+        for(numSplits = toSplit.split(sequence, sink); numSplits == sink.length; numSplits = toSplit.split(sequence, sink)) {
+            if(totalNumStrands + numSplits - 1 >= allSplits.length) {
+                allSplits = Arrays.copyOf(allSplits, allSplits.length * 2);
+            }
+            System.arraycopy(sink, 0, allSplits, totalNumStrands, numSplits - 1);
+            toSplit = sink[numSplits-1];
+            totalNumStrands += numSplits - 1;
+        }
+        if(numSplits > 0) {
+            if (totalNumStrands + numSplits >= allSplits.length) {
+                allSplits = Arrays.copyOf(allSplits, totalNumStrands + numSplits);
+            }
+            System.arraycopy(sink, 0, allSplits, totalNumStrands, numSplits);
+            totalNumStrands += numSplits;
+        }
+        return Arrays.copyOfRange(allSplits, 0, totalNumStrands);
+    }
 
     public Strand[] split(byte[] sequence, int maxNumSplits) {
 
