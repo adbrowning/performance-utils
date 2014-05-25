@@ -276,16 +276,48 @@ public class Strand implements CharSequence {
         return retVal;
     }
 
+
+//    public Strand[] split(byte[] sequence) {
+//        Strand[] allSplits = new Strand[10];
+//        int totalNumStrands = 0;
+//        Strand[] sink = new Strand[10];
+//        Strand toSplit = this;
+//        for(int numSplits = toSplit.split(sequence, sink); numSplits == sink.length; numSplits = toSplit.split(sequence, sink)) {
+//            if(totalNumStrands + numSplits - 1 >= allSplits.length) {
+//                allSplits = Arrays.copyOf(allSplits, allSplits.length * 2);
+//            }
+//            System.arraycopy(sink, 0, allSplits, totalNumStrands, numSplits - 1);
+//            toSplit = sink[numSplits-1];
+//            totalNumStrands += numSplits - 1;
+//        }
+//        return Arrays.copyOfRange(allSplits, 0, totalNumStrands);
+//    }
+
     public Strand[] split(byte[] sequence, int maxNumSplits) {
-        Strand[] retVal = new Strand[maxNumSplits];
+
+        final Strand[] retVal = new Strand[maxNumSplits];
+        int numSplits = split(sequence, retVal);
+        return Arrays.copyOfRange(retVal, 0, numSplits);
+    }
+
+    public int split(byte[] sequence, Strand[] splitInto) {
+
         int tokenStarts = getStartingIndex();
         int endIndex = getStrandEnd();
         int resultsIndex = 0;
-        for(int i = 0; tokenStarts < endIndex && i < retVal.length; ++i) {
-            tokenStarts = nextSplit(sequence, retVal, resultsIndex, tokenStarts);
-            ++resultsIndex;
+        for(; tokenStarts < endIndex && resultsIndex < splitInto.length - 1; ++resultsIndex) {
+            tokenStarts = nextSplit(sequence, splitInto, resultsIndex, tokenStarts)+1;
         }
-        return retVal;
+        if(tokenStarts < endIndex) {
+            splitInto[resultsIndex++] = new Substrand(contents, tokenStarts, endIndex);
+        }
+        for(int i = resultsIndex-1; i >= 0; --i) {
+            if(splitInto[i].length() > 0) {
+                break;
+            }
+            --resultsIndex;
+        }
+        return resultsIndex;
     }
 
     /**

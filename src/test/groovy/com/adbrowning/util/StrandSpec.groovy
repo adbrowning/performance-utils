@@ -70,6 +70,20 @@ class StrandSpec extends Specification {
         -1  |   "ab\u05D0d"
     }
 
+    def "split with max num results"() {
+        given:
+        Strand theStrand = new Strand("ab\r\n\u05D0\r\ncd\r\n".getBytes("utf8"))
+        expect:
+        expectedResults == theStrand.split("\r\n".getBytes("utf8"), maxNumResults)
+        where:
+        maxNumResults   |   expectedResults
+        1               |   [new Strand("ab\r\n\u05D0\r\ncd\r\n".getBytes("utf8"))]
+        2               |   [new Strand("ab".getBytes("utf8")), new Strand("\u05D0\r\ncd\r\n".getBytes("utf8"))]
+        3               |   [new Strand("ab".getBytes("utf8")), new Strand("\u05D0".getBytes("utf8")), new Strand("cd\r\n".getBytes("utf8"))]
+        4               |   [new Strand("ab".getBytes("utf8")), new Strand("\u05D0".getBytes("utf8")), new Strand("cd".getBytes("utf8"))]
+        5               |   [new Strand("ab".getBytes("utf8")), new Strand("\u05D0".getBytes("utf8")), new Strand("cd".getBytes("utf8"))]
+    }
+
     def "Subsequence cutting off a 7-bit ASCII char"() {
         Strand theStrand = new Strand("\u0080ABCD\u0080E".getBytes("utf8"));
         CharSequence subsequence = theStrand.subSequence(1, 6);
