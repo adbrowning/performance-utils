@@ -165,7 +165,9 @@ public class Strand implements CharSequence {
     public String toString() {
         String retVal = null;
         try {
-            retVal = new String(contents, getStartingIndex(), getStrandEnd(), "utf8");;
+            int start = getStartingIndex();
+            int end = getStrandEnd();
+            retVal = new String(contents, start, end - start, "utf8");;
         } catch (UnsupportedEncodingException e) {
             // this should never happen, but...
             char[] sink = new char[getStrandLength()];
@@ -274,6 +276,47 @@ public class Strand implements CharSequence {
         return retVal;
     }
 
+    public Strand[] split(byte[] sequence, int maxNumSplits) {
+        Strand[] retVal = new Strand[maxNumSplits];
+        int tokenStarts = getStartingIndex();
+        int endIndex = getStrandEnd();
+        int resultsIndex = 0;
+        for(int i = 0; tokenStarts < endIndex && i < retVal.length; ++i) {
+            tokenStarts = nextSplit(sequence, retVal, resultsIndex, tokenStarts);
+            ++resultsIndex;
+        }
+        return retVal;
+    }
+
+    /**
+     * Extracts from startFrom to immediately before the start of sequence into splitInto at the index splitIntoIndex,
+     * returning the index of the last byte of sequence or the end of the strand if sequence does not appear
+     * @param sequence
+     * @param splitInto
+     * @param splitIntoIndex
+     * @param startFrom the byte index from which to start searching
+     * @return the index of the position of the last byte of sequence; NOTE: this is the byte index, not the char index
+     */
+    protected int nextSplit(byte[] sequence, Strand[] splitInto, int splitIntoIndex, int startFrom) {
+        int endIndex = getStrandEnd();
+        int sequenceIndex = 0;
+        int potentialTokenEnd = -1;
+        for(int i = startFrom; i < endIndex; ++i) {
+            if(sequence[sequenceIndex] == contents[i]) {
+                if(sequenceIndex == 0) {
+                    potentialTokenEnd = i;
+                }
+                ++sequenceIndex;
+                if(sequenceIndex == sequence.length) {
+                    splitInto[splitIntoIndex] = new Substrand(contents, startFrom, potentialTokenEnd);
+                    return i;
+                }
+            }
+        }
+        splitInto[splitIntoIndex] = new Substrand(contents, startFrom, endIndex);
+        // sequence didn't appear, so return one past the last index
+        return endIndex;
+    }
     /**
      * Implements startsWith as defined in String, but using a provided offset so that this can be reused
      * from a subsequence that didn't copy its contents into a new, smaller array
