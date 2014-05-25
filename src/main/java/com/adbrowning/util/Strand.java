@@ -27,6 +27,15 @@ public class Strand implements CharSequence {
         }
     }
 
+    public Strand(byte[] utf8Bytes, boolean makeCopy, boolean hasMultiByteChars) {
+        if(makeCopy) {
+            contents = Arrays.copyOf(utf8Bytes, utf8Bytes.length);
+        } else {
+            contents = utf8Bytes;
+        }
+        this.hasMultiByteChars = hasMultiByteChars;
+    }
+
     /**
      * Returns the length of this character sequence.  The length is the number
      * of 16-bit <code>char</code>s in the sequence.</p>
@@ -317,10 +326,10 @@ public class Strand implements CharSequence {
             tokenStarts = nextSplit(sequence, splitInto, resultsIndex, tokenStarts)+1;
         }
         if(tokenStarts < endIndex) {
-            splitInto[resultsIndex++] = new Substrand(contents, tokenStarts, endIndex);
+            splitInto[resultsIndex++] = new Substrand(contents, tokenStarts, endIndex, hasMultiByteChars);
         }
         for(int i = resultsIndex-1; i >= 0; --i) {
-            if(splitInto[i].length() > 0) {
+            if(splitInto[i].getStrandLength() > 0) {
                 break;
             }
             --resultsIndex;
@@ -340,20 +349,23 @@ public class Strand implements CharSequence {
     protected int nextSplit(byte[] sequence, Strand[] splitInto, int splitIntoIndex, int startFrom) {
         int endIndex = getStrandEnd();
         int sequenceIndex = 0;
-        int potentialTokenEnd = -1;
+        int potentialTokenEnd = endIndex;
+        boolean hasMultibyte = false;
         for(int i = startFrom; i < endIndex; ++i) {
+            hasMultibyte = hasMultiByteChars && (hasMultibyte || contents[i] < 0);
             if(sequence[sequenceIndex] == contents[i]) {
-                if(sequenceIndex == 0) {
-                    potentialTokenEnd = i;
-                }
-                ++sequenceIndex;
-                if(sequenceIndex == sequence.length) {
-                    splitInto[splitIntoIndex] = new Substrand(contents, startFrom, potentialTokenEnd);
+                potentialTokenEnd = Math.min(potentialTokenEnd, i);
+                if(sequenceIndex == sequence.length-1) {
+                    splitInto[splitIntoIndex] = new Substrand(contents, startFrom, potentialTokenEnd, hasMultibyte);
                     return i;
                 }
+                ++sequenceIndex;
+            } else {
+                sequenceIndex = contents[i] == sequence[0] ? 1 : 0;
+                potentialTokenEnd = endIndex;
             }
         }
-        splitInto[splitIntoIndex] = new Substrand(contents, startFrom, endIndex);
+        splitInto[splitIntoIndex] = new Substrand(contents, startFrom, endIndex, hasMultibyte);
         // sequence didn't appear, so return one past the last index
         return endIndex;
     }

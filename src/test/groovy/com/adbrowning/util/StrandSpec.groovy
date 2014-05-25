@@ -283,4 +283,34 @@ class StrandSpec extends Specification {
         13  |   '\u1FFF'
         14  |   'N'
     }
+
+    def "Test split with false start"() {
+        given:
+        Strand str = new Strand("ab|cd|ef||gh".getBytes("utf8"))
+        Strand[] substrands = str.split("||".getBytes("utf8"))
+        expect:
+        substrands.length == 2
+        substrands[0] == new Strand("ab|cd|ef".getBytes("utf8"))
+        substrands[1] == new Strand("gh".getBytes("utf8"))
+    }
+
+    def "Test splitting into an entry"() {
+        given:
+        Strand str = new Strand("abc\r\nde\u05D0\r\nfgh\r\ni".getBytes("utf8"))
+        Strand[] substrands = new Strand[4]
+        expect:
+        4 == str.nextSplit("\r\n".getBytes("utf8"), substrands, 0, 0)
+        10 == str.nextSplit("\r\n".getBytes("utf8"), substrands, 1, 5)
+        15 == str.nextSplit("\r\n".getBytes("utf8"), substrands, 2, 11)
+        str.nextSplit("\r\n".getBytes("utf8"), substrands, 3, 16)
+
+        substrands[0] == "abc"
+        println "substrands[0]: " + substrands[0]
+        substrands[1] == "de\u05D0"
+        println "substrands[1]: " + substrands[1]
+        substrands[2] == "fgh"
+        println "substrands[2]: " + substrands[2]
+        substrands[3] == "i"
+        println "substrands[3]: " + substrands[3]
+    }
 }
