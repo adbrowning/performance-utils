@@ -1,9 +1,28 @@
+/*
+ *  Copyright 2014 Adam Browning
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.adbrowning.util;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 /**
+ * Lightweight class providing many of the features of String against a UTF-8 encoded byte array. One of the driving principles
+ * behind this class is to minimize memory usage, so length and hash code are <strong>not</strong> memoized (that is, they
+ * are recalculated on each call), so length() runs in linear time if there are any multi-byte characters present.
  * Created by adam on 5/16/14.
  */
 public class Strand implements CharSequence {
@@ -16,6 +35,12 @@ public class Strand implements CharSequence {
         this(utf8Bytes, false);
     }
 
+    /**
+     * Instantiates a Strand over utf8Bytes, optionally copying to a new array, running a test to determine if any of the
+     * characters are multi-byte characters (causing this to run in linear time, though possibly constant memory)
+     * @param utf8Bytes
+     * @param makeCopy true to make a copy of utf8Bytes, freeing it up to be altered at will
+     */
     public Strand(byte[] utf8Bytes, boolean makeCopy) {
         if(makeCopy) {
             contents = Arrays.copyOf(utf8Bytes, utf8Bytes.length);
@@ -27,6 +52,13 @@ public class Strand implements CharSequence {
         }
     }
 
+    /**
+     * Instantiates a Strand over utf8Bytes, optionally making a copy and allowing the calling code to specify if there
+     * are any multi-byte characters in the array, permitting this constructor to run in constant time and memory
+     * @param utf8Bytes
+     * @param makeCopy
+     * @param hasMultiByteChars
+     */
     public Strand(byte[] utf8Bytes, boolean makeCopy, boolean hasMultiByteChars) {
         if(makeCopy) {
             contents = Arrays.copyOf(utf8Bytes, utf8Bytes.length);
@@ -47,6 +79,12 @@ public class Strand implements CharSequence {
         return length(getStartingIndex(), getStrandEnd());
     }
 
+    /**
+     * Calculates the number of <code>char</code> elements between start and end
+     * @param start
+     * @param end
+     * @return
+     */
     protected int length(int start, int end) {
         int retVal = 0;
         if(hasMultiByteChars) {
@@ -65,11 +103,8 @@ public class Strand implements CharSequence {
      * Returns the <code>char</code> value at the specified index.  An index ranges from zero
      * to <tt>length() - 1</tt>.  The first <code>char</code> value of the sequence is at
      * index zero, the next at index one, and so on, as for array
-     * indexing. </p>
+     * indexing. If this Strand has multi-byte characters, this method will run in linear time</p>
      * <p/>
-     * <p>If the <code>char</code> value specified by the index is a
-     * <a href="{@docRoot}/java/lang/Character.html#unicode">surrogate</a>, the surrogate
-     * value is returned.
      *
      * @param index the index of the <code>char</code> value to be returned
      * @return the specified <code>char</code> value
@@ -81,7 +116,13 @@ public class Strand implements CharSequence {
         return charAt(index, getStartingIndex());
     }
 
-    public char charAt(int index, int firstByte) {
+    /**
+     * Implementation of charAt that starts counting from a given start; here to simplify subclasses
+     * @param index
+     * @param firstByte
+     * @return
+     */
+    protected char charAt(int index, int firstByte) {
         if(hasMultiByteChars) {
             int arrayIndex = firstByte;
             int charIndex = 0;
@@ -116,16 +157,33 @@ public class Strand implements CharSequence {
     public CharSequence subSequence(int start, int end) {
         int rawStart = getStartingIndex();
         int currentChar = 0;
+        if(start < 0) {
+            throw new IndexOutOfBoundsException("start must be at least 0; received: " + start);
+        }
+
+        if(!hasMultiByteChars) {
+            return rawSubSequence(start, end);
+        }
+
         for(; currentChar < start; ++currentChar) {
             rawStart += utf8CharSize(contents[rawStart]);
         }
         int rawEnd = rawStart;
+        int lastIndex = getStrandEnd();
         for(; currentChar < end; ++currentChar) {
             rawEnd += utf8CharSize(contents[rawEnd]);
+            if(rawEnd >= lastIndex) {
+                throw new IndexOutOfBoundsException(end + " is beyond the bounds of this Strand");
+            }
+
         }
         return new Substrand(contents, rawStart, rawEnd);
     }
 
+
+    protected CharSequence rawSubSequence(int start, int end) {
+        return new Substrand(contents, start + getStartingIndex(), end);
+    }
     /**
      * Implements startsWith as defined in String, but accepting a raw array of UTF8 bytes
      * @param prefix
@@ -211,9 +269,9 @@ public class Strand implements CharSequence {
                 }
             }
         } else if((o instanceof CharSequence)) {
-            int myLenth = length();
+            int myLength = length();
             CharSequence other = (CharSequence) o;
-            if(myLenth != other.length()) {
+            if(myLength != other.length()) {
                 return false;
             }
             for(int myIndex = getStartingIndex(), otherIndex = 0; myIndex < getStrandEnd(); ++otherIndex) {
@@ -239,11 +297,25 @@ public class Strand implements CharSequence {
         return retVal;
     }
 
+    /**
+     * Returns the index of the start of bytes in the Strand; note, this is the raw index, not the character offset
+     * @param bytes
+     * @return
+     */
     public int indexOf(byte[] bytes) {
+        return indexOf(bytes, 0);
+    }
+
+    /**
+     * Returns the index of the start of bytes in the Strand after start; note, this is the raw index, not the character offset
+     * @param bytes
+     * @return
+     */
+    public int indexOf(byte[] bytes, int start) {
         int retVal = -1;
 
         int lastPossibleStart = getStrandEnd() - bytes.length;
-        for(int i = getStartingIndex(); retVal == -1 && i <= lastPossibleStart; ++i) {
+        for(int i = getStartingIndex() + start; retVal == -1 && i <= lastPossibleStart; ++i) {
 
             if(contents[i] == bytes[0]) {
                 boolean restMatched = true;
@@ -286,6 +358,12 @@ public class Strand implements CharSequence {
     }
 
 
+    /**
+     * Splits the Strand into Substrands at sequence boundaries, _without_ the sequence. Trailing empty Strands are not
+     * returned, per the contract with String.split. Sequence is taken as a literal series of bytes, NOT a regular expression.
+     * @param sequence
+     * @return
+     */
     public Strand[] split(byte[] sequence) {
         Strand[] allSplits = new Strand[10];
         int totalNumStrands = 0;
@@ -310,6 +388,14 @@ public class Strand implements CharSequence {
         return Arrays.copyOfRange(allSplits, 0, totalNumStrands);
     }
 
+    /**
+     * Splits the Strand into Substrands at sequence boundaries, _without_ the sequence, up to maxNumSplits. Trailing empty Strands are not
+     * returned, per the contract with String.split. Sequence is taken as a literal series of bytes, NOT a regular expression.
+     * If there are more than maxNumSplits subsequences, the last Strand in the array will be the suffix of the entire Strand
+     * after the (maxNumSplits-1)th subsequence
+     * @param sequence
+     * @return
+     */
     public Strand[] split(byte[] sequence, int maxNumSplits) {
 
         final Strand[] retVal = new Strand[maxNumSplits];
@@ -317,6 +403,13 @@ public class Strand implements CharSequence {
         return Arrays.copyOfRange(retVal, 0, numSplits);
     }
 
+    /**
+     * Same general behavior as split, except it splits into the provided array, returning the number of subsequences into
+     * which the Strand was split
+     * @param sequence
+     * @param splitInto
+     * @return
+     */
     public int split(byte[] sequence, Strand[] splitInto) {
 
         int tokenStarts = getStartingIndex();
@@ -388,17 +481,25 @@ public class Strand implements CharSequence {
     }
 
     /**
-     * Returns one greater than the last valid index
+     * Returns one greater than the last valid index; here primarily to make subclassing easier
      * @return
      */
     protected int getStrandEnd() {
         return contents.length;
     }
 
+    /**
+     * Returns the length of the Strand
+     * @return
+     */
     protected int getStrandLength() {
         return contents.length;
     }
 
+    /**
+     * Returns the starting index of the strand; here primarily to allow making subclassing easier
+     * @return
+     */
     protected int getStartingIndex() {
         return 0;
     }

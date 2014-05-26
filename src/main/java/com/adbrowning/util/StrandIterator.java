@@ -1,9 +1,27 @@
+/*
+ *  Copyright 2014 Adam Browning
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.adbrowning.util;
 
 import java.util.Iterator;
 
 /**
- * Created by adam on 5/21/14.
+ * Provides linear access to a Strand; this has the benefit of having constant time access to the next element, whereas
+ * a for loop calling charAt on a Strand may be O(n^2), as it has to do a linear scan to find the nth char if there are
+ * multi-byte characters. This also adds some convenience methods to make tokenizing easier.
  */
 public class StrandIterator implements Iterator<Character> {
     protected int startIndex;
@@ -65,18 +83,36 @@ public class StrandIterator implements Iterator<Character> {
         return retVal;
     }
 
+    /**
+     * Sets an internal start token marker before the last char returned from nextChar (or next); if next has not yet been called, the
+     * marker is set immediately before the first character
+     */
     public void startTokenBeforeMostRecentChar() {
         tokenStart = Math.max(index, startIndex);
     }
 
+    /**
+     * Sets an internal start token marker after the last char returned from nextChar (or next); if next has not yet been called,
+     * the marker is set immediately after the first char. This should NOT be called before calling next (or nextChar) at least once
+     */
     public void startTokenAfterMostRecentChar() {
         tokenStart = index + Strand.utf8CharSize(bytes[Math.max(index, startIndex)]);
     }
 
+    /**
+     * Returns the substrand between the start token marker and the most recent char returned from a call to next, exclusive
+     * (i.e. the char returned from the call to next is not included)
+     * @return
+     */
     public Strand endTokenBeforeMostRecentChar() {
         return new Substrand(bytes, tokenStart, index);
     }
 
+    /**
+     * Returns the substrand between the start token marker and the most recent char returned from a call to next, inclusive
+     * (i.e. the char returned from the call to next is included)
+     * @return
+     */
     public Strand endTokenAfterMostRecentChar() {
         return new Substrand(bytes, tokenStart, index+Strand.utf8CharSize(bytes[index]));
     }
