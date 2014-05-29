@@ -312,42 +312,16 @@ public class Strand implements CharSequence {
      * @return
      */
     public int indexOf(byte[] bytes, int start) {
+        KMPSearcher searcher = new KMPSearcher(bytes);
+        int rawIndex = searcher.find(contents, getStartingIndex(), getStrandEnd());
         int retVal = -1;
-
-        int lastPossibleStart = getStrandEnd() - bytes.length;
-        for(int i = getStartingIndex() + start; retVal == -1 && i <= lastPossibleStart; ++i) {
-
-            if(contents[i] == bytes[0]) {
-                boolean restMatched = true;
-                // check the rest of the contents
-                for(int j = 1; restMatched && j < bytes.length; ++j) {
-                    if(contents[i+j] != bytes[j]) {
-                        if(contents[i+j] == bytes[0]) {
-                            i += (j-1);
-                        } else {
-                            i += j;
-                        }
-                        restMatched = false;
-                    }
-                }
-                if(restMatched) {
-                    if(hasMultiByteChars) {
-                        retVal = 0;
-                        // this looks weird, but it's because retVal increases by 1 for each char, but the index may increase by up to 6
-                        for(int j = getStartingIndex(); j < i; ++retVal) {
-                            j += utf8CharSize(contents[j]);
-                        }
-                    } else {
-                        retVal = i;
-                    }
-                }
-            } else {
-                continue;
-            }
+        for(int i = getStartingIndex(); i <= rawIndex; ++retVal) {
+            i += utf8CharSize(contents[i]);
         }
         return retVal;
 
     }
+
     @Override
     public int hashCode() {
         int retVal = 0;
