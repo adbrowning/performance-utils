@@ -54,6 +54,13 @@ class StrandSpec extends Specification {
         -1  |   "abcd"
     }
 
+    def "indexOf with repeated prefix"() {
+        given:
+        Strand theStrand = new Strand("abcabcabd".getBytes("utf8"))
+        expect:
+        3 == theStrand.indexOf("abcabd".getBytes("utf8"))
+    }
+
     def "indexOf with multi-byte chars"() {
         Strand theStrand = new Strand("ab\u05d0cd".getBytes("utf8"))
         expect:
