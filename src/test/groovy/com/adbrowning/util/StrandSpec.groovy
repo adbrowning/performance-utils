@@ -225,7 +225,6 @@ class StrandSpec extends Specification {
         0xF8 | 5
         0xFB | 5
         0xFC | 6
-        0xFF | 6
     }
 
     def "Test decoding utf-8 chars"() {
