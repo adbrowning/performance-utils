@@ -35,7 +35,6 @@ public class KMPSearcher {
             this.pattern = pattern;
         }
         prefixFunction = calculatePrefixFunction(pattern);
-        System.out.println("Calculated prefix: " + Arrays.toString(prefixFunction));
     }
 
     public int find(byte[] text, int start, int end) {
@@ -49,7 +48,6 @@ public class KMPSearcher {
                 ++q;
             }
             if(q == pattern.length) {
-                System.out.println("Found " + new String(pattern) + " in " + new String(text) + " at i == " + i);
                 retVal = (i - pattern.length) + 1;
                 break;
             }
